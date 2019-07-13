@@ -5,7 +5,7 @@
 
 #define STRING "Hello world!"
 
-var main(void) {
+bool main(void) {
 	font_t font = create_font("config/fonts/main.ttf", UMAX / 20);
 	texture_t texture = create_texture_from_font(font, STRING);
 	
@@ -29,6 +29,6 @@ var main(void) {
 	
 	texture_remove(texture);
 	font_remove(font);
-	return 0;
+	return false;
 	
 }
