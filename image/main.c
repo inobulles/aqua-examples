@@ -32,7 +32,7 @@ bool main(void) {
 	iterate (quote_request.bytes) {
 		if (sncmp(quote_request.data + i, "\"quote\": \"", 9) == 0) { // found quote text
 			var k;
-			for (k = i += 10; quote_request.data[k] != '"' and quote_request.data[k + 1] != ',' and k < quote_request.bytes; k++);
+			for (k = i += 10; quote_request.data[k] != '"' or quote_request.data[k + 1] != ',' and k < quote_request.bytes; k++);
 			quote_text = (char*) malloc(k - i + 1);
 			mset(quote_text, 0, k - i + 1);
 			mcpy(quote_text, quote_request.data + i, k - i);
@@ -40,7 +40,7 @@ bool main(void) {
 			
 		} elif (sncmp(quote_request.data + i, "\"background\": \"", 14) == 0) { // found quote image url
 			var k;
-			for (k = i += 15; quote_request.data[k] != '"' and quote_request.data[k + 1] != ',' and k < quote_request.bytes; k++);
+			for (k = i += 15; quote_request.data[k] != '"' or quote_request.data[k + 1] != ',' and k < quote_request.bytes; k++);
 			quote_image_url = (char*) malloc(k - i + 1);
 			mset(quote_image_url, 0, k - i + 1);
 			mcpy(quote_image_url, quote_request.data + i, k - i);
