@@ -1,4 +1,3 @@
-
 // simple program that downloads the quote of the day from "https://quotes.rest/qod",
 // parses it and extracts the quote and the background image url,
 // downloads the background image from said url,
@@ -22,6 +21,7 @@ bool main(void) {
 	request_t quote_request;
 	if (request_get(&quote_request, "https://quotes.rest/qod")) {
 		print("WARNING Quote request failed (error %lld)\n", quote_request.code);
+		request_free(&quote_request);
 		return true;
 		
 	}
@@ -62,7 +62,8 @@ bool main(void) {
 		mfree(quote_text,      slen(quote_text)      + 1);
 		mfree(quote_image_url, slen(quote_image_url) + 1);
 		
-		print("WARNING Quote background image request failed (error %lld)\n", background_request.code);
+		print("WARNING Failed to download quote background image (error %lld)\n", background_request.code);
+		request_free(&background_request);
 		return true;
 		
 	}
@@ -90,6 +91,7 @@ bool main(void) {
 		else new_surface(&quote_surface, -width / 2, FLOAT_TO_UMAX_MARGIN(MUL_FLOAT(SIN_FLOAT(x), FLOAT_ONE - UMAX_MARGIN_TO_FLOAT(height / 2))) - height / 2, width, height);
 		
 		surface_set_texture(&quote_surface, quote_texture);
+		surface_set_layer(&quote_surface, 8);
 		surface_draw(&quote_surface);
 		
 		video_flip();

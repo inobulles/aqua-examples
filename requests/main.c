@@ -12,6 +12,7 @@ bool main(void) {
 	request_user_agent(REQUEST_USER_AGENT_MODERN_BROWSER);
 	if (request_get(&request, "https://baconipsum.com/api/?type=meat-and-filler&paras=5&format=text")) {
 		print("WARNING Request failed (error %lld)\n", request.code);
+		request_free(&request);
 		return true;
 		
 	}
