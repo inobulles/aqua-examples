@@ -73,7 +73,7 @@ bool main(void) {
 	new_surface(&background_surface, -UMAX_MARGIN, -UMAX_MARGIN, UMAX_MARGIN * 2, UMAX_MARGIN * 2);
 	surface_set_texture(&background_surface, background);
 	
-	font_t font = create_font("config/fonts/main.ttf", UMAX / 20);
+	font_t font = create_font_from_ttf_file("config/fonts/main.ttf", UMAX / 20);
 	texture_t quote_texture = create_texture_from_font(font, quote_text);
 	surface_t quote_surface;
 	
