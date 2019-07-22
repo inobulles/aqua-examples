@@ -8,6 +8,7 @@
 bool main(void) {
 	font_t font = create_font_from_ttf_file("config/fonts/main.ttf");
 	font_size(font, UMAX / 20);
+	
 	texture_t texture = create_texture_from_font(font, STRING);
 	
 	var width  = RATIO_X(get_font_width (font, STRING));
