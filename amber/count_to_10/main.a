@@ -1,0 +1,29 @@
+
+// '0' is to be replaced by some number
+var const_string = "Hello: 0\n";
+
+// 'const_string' is 9 bytes long, excluding the null-byte
+var string_length = 9;
+
+// allocate one more byte for the null-byte ('allocate' automatically zeroes for us)
+var string = kfunc allocate(string_length + 1);
+
+if not string {
+	kfunc print "ERROR Out of memory!\n";
+	return true;
+}
+
+kfunc copy string, const_string, string_length;
+
+var number = 0;
+
+while number < 10 {
+	// replace 8th character in our string (that '0')
+	*(string + 7) = '0' + number;
+
+	kfunc print string;
+	number += 1;
+}
+
+kfunc print "Done!\n";
+return false;

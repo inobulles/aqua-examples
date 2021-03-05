@@ -1,0 +1,13 @@
+
+# 'xa' (means 'A' in hexadecimal, '10' in decimal) is the newline character ('\n')
+# '0' is the null-byte
+
+%hello_world "Hello world!" xa 0%
+
+:main: # main label
+
+	# move the 'hello_world' data label to our first argument register ('a0')
+	mov a0 hello_world
+
+	# call the 'print' kfunc and put its return value in the 'g0' register
+	cal g0 print
