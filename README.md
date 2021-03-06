@@ -65,7 +65,7 @@ Then, apply your changes, commit, and push to your branch:
 ```
 $ git add .
 $ git commit -m "My new commit message"
-$ git push -u origin my_new_example_branch
+$ git push --set-upstream origin my_new_example_branch
 ```
 
 Please make your commit messages as clear as possible.
