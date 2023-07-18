@@ -1,0 +1,13 @@
+CompileFlags:
+  Add:
+    - -xc
+    - -std=c99
+    - -Wall
+    - -Wextra
+    - -I/home/obiwac/aqua-c/src
+Diagnostics:
+  UnusedIncludes: Strict
+  ClangTidy:
+    Add: modernize*
+InlayHints:
+  ParameterNames: No
