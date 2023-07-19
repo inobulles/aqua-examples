@@ -30,47 +30,29 @@ typedef struct {
 	WGPUAdapter adapter;
 	WGPUDevice device;
 	WGPURenderPipeline render_pipeline;
+	WGPUTextureFormat surface_preferred_format;
 	WGPUSwapChain swapchain;
 	WGPUQueue queue;
-
-	bool skip_frame;
 } state_t;
 
-static void texture_view_err_cb(WGPUErrorType type, char const* msg, void* param) {
+static void texture_view_err_cb(WGPUErrorType type, char const* msg, void* data) {
+	(void) data;
+
 	if (type == WGPUErrorType_NoError) {
 		return;
 	}
 
 	LOG_WARN("%s: type = %#.8x, message = \"%s\"", __func__, type, msg);
-	state_t* const state = param;
-
-	if (
-		strstr(msg, "Surface timed out") ||
-		strstr(msg, "Surface is outdated") ||
-		strstr(msg, "Surface was lost")
-	) {
-		state->skip_frame = true;
-	}
 }
 
-static int draw(uint64_t _ __attribute__((unused)), uint64_t _state) {
-	state_t* const state = (void*) _state;
+static int draw(uint64_t _ __attribute__((unused)), uint64_t data) {
+	state_t* const state = (void*) data;
 
 	// get texture view for next frame
 
 	wgpuDevicePushErrorScope(state->device, WGPUErrorFilter_Validation);
 	WGPUTextureView const texture_view = wgpuSwapChainGetCurrentTextureView(state->swapchain);
 	wgpuDevicePopErrorScope(state->device, texture_view_err_cb, state);
-
-	if (state->skip_frame) {
-		state->skip_frame = false;
-
-		if (texture_view) {
-			wgpuTextureViewRelease(texture_view);
-		}
-
-		return 0;
-	}
 
 	if (!texture_view) {
 		LOG_ERROR("Failed to get current texture view");
@@ -117,7 +99,7 @@ static int draw(uint64_t _ __attribute__((unused)), uint64_t _state) {
 
 	// create final command buffer
 
-	WGPUCommandBufferDescriptor const command_buffer_descr = { .label = "command_buffer", };
+	WGPUCommandBufferDescriptor const command_buffer_descr = { .label = "command_buffer" };
 	WGPUCommandBuffer const command_buffer = wgpuCommandEncoderFinish(command_encoder, &command_buffer_descr);
 
 	if (!command_buffer) {
@@ -151,6 +133,44 @@ err_command_encoder:
 	wgpuTextureViewRelease(texture_view);
 
 err_texture_view:
+
+	return 0;
+}
+
+static int resize(uint64_t _ __attribute__((unused)), uint64_t data) {
+	state_t* const state = (void*) data;
+
+	uint64_t const x_res = win_get_x_res(&state->win);
+	uint64_t const y_res = win_get_y_res(&state->win);
+
+	LOG_INFO("Window resized to resolution %dx%d", x_res, y_res);
+
+	// free previous swapchain if there is one
+
+	if (state->swapchain) {
+		wgpuSwapChainRelease(state->swapchain);
+	}
+
+	// XXX this is very glitchy-looking	on Xorg
+	//     the solution apparently is to reuse the old swapchain by setting VkSwapchainCreateInfoKHR.oldSwapchain
+	//     unfortunately, WebGPU doesn't expose this (even through WGPUSwapChainDescriptorExtras)...
+	//     ...so we'll have to hope things are smoother on Wayland 😉
+
+	LOG_VERBOSE("Recreating swapchain with new resolution");
+
+	WGPUSwapChainDescriptor const swapchain_descr = {
+		.usage = WGPUTextureUsage_RenderAttachment,
+		.format = state->surface_preferred_format,
+		.presentMode = WGPUPresentMode_Immediate,
+		.width = x_res,
+		.height = y_res,
+	};
+
+	state->swapchain = wgpuDeviceCreateSwapChain(state->device, state->surface, &swapchain_descr);
+
+	if (!state->swapchain) {
+		LOG_ERROR("Failed to recreate swapchain");
+	}
 
 	return 0;
 }
@@ -213,7 +233,7 @@ int main(void) {
 
 	win_set_caption(&state.win, "WebGPU Example");
 	win_register_cb(&state.win, WIN_CB_DRAW, draw, &state);
-	// TODO register resizing callback, upon which we create a new swapchain etc
+	win_register_cb(&state.win, WIN_CB_RESIZE, resize, &state);
 
 	LOG_INFO("Window created of resolution %dx%d", X_RES, Y_RES);
 
@@ -227,10 +247,7 @@ int main(void) {
 
 	LOG_VERBOSE("Requesting WebGPU adapter");
 
-	WGPURequestAdapterOptions const request_adapter_options = {
-		.compatibleSurface = state.surface,
-	};
-
+	WGPURequestAdapterOptions const request_adapter_options = { .compatibleSurface = state.surface };
 	wgpuInstanceRequestAdapter(state.instance, &request_adapter_options, request_adapter_cb, &state);
 
 	if (!state.adapter) {
@@ -295,7 +312,7 @@ int main(void) {
 
 	LOG_VERBOSE("Creating pipeline layout");
 
-	WGPUPipelineLayoutDescriptor const pipeline_layout_descr = { .label = "pipeline_layout", };
+	WGPUPipelineLayoutDescriptor const pipeline_layout_descr = { .label = "pipeline_layout" };
 	WGPUPipelineLayout const pipeline_layout = wgpuDeviceCreatePipelineLayout(state.device, &pipeline_layout_descr);
 
 	if (!pipeline_layout) {
@@ -305,14 +322,14 @@ int main(void) {
 
 	LOG_VERBOSE("Getting preferred surface format");
 
-	WGPUTextureFormat const surface_preferred_format = wgpuSurfaceGetPreferredFormat(state.surface, state.adapter);
+	state.surface_preferred_format = wgpuSurfaceGetPreferredFormat(state.surface, state.adapter);
 
-	if (surface_preferred_format == WGPUTextureFormat_Undefined) {
+	if (state.surface_preferred_format == WGPUTextureFormat_Undefined) {
 		LOG_FATAL("Found no preferred surface format");
 		goto err_preferred_format;
 	}
 
-	LOG_INFO("Preferred surface format is 0x%x", surface_preferred_format);
+	LOG_INFO("Preferred surface format is 0x%x", state.surface_preferred_format);
 	LOG_VERBOSE("Creating render pipeline");
 
 	WGPUVertexState const vert_state = {
@@ -322,7 +339,7 @@ int main(void) {
 
 	WGPUColorTargetState const target_states[] = {
 		{
-			.format = surface_preferred_format,
+			.format = state.surface_preferred_format,
 			.writeMask = WGPUColorWriteMask_All,
 		}
 	};
@@ -359,12 +376,20 @@ int main(void) {
 		goto err_render_pipeline;
 	}
 
+	LOG_VERBOSE("Get device queue");
+	state.queue = wgpuDeviceGetQueue(state.device);
+
+	if (!state.queue) {
+		LOG_FATAL("Failed to get device queue");
+		goto err_queue;
+	}
+
 	LOG_VERBOSE("Create swapchain");
 
 	WGPUSwapChainDescriptor const swapchain_descr = {
 		.usage = WGPUTextureUsage_RenderAttachment,
-		.format = surface_preferred_format,
-		.presentMode = WGPUPresentMode_Fifo,
+		.format = state.surface_preferred_format,
+		.presentMode = WGPUPresentMode_Immediate,
 		.width = X_RES,
 		.height = Y_RES,
 	};
@@ -374,14 +399,6 @@ int main(void) {
 	if (!state.swapchain) {
 		LOG_FATAL("Failed to create swapchain");
 		goto err_swapchain;
-	}
-
-	LOG_VERBOSE("Get device queue");
-	state.queue = wgpuDeviceGetQueue(state.device);
-
-	if (!state.queue) {
-		LOG_FATAL("Failed to get device queue");
-		goto err_queue;
 	}
 
 	LOG_VERBOSE("Starting main draw loop");
