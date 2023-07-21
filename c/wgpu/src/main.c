@@ -12,12 +12,8 @@
 #include <core/log.h>
 #define LOG_COMPONENT "aqua.examples.wgpu"
 
-#include <stdio.h>
-#include <string.h>
-#include <unistd.h>
-
-#define X_RES 800
-#define Y_RES 600
+#define X_RES 500
+#define Y_RES 400
 
 #define SHADER_NAME "main"
 #define CLEAR_COLOUR { 0, 0, 0, 0 }
@@ -269,10 +265,6 @@ int main(void) {
 	}
 
 	LOG_VERBOSE("Loading shader module source ('" SHADER_NAME "')");
-
-	// TODO move over to SPIR-V, compiling at runtime is a stupid idea
-	//      or maybe do both, with an option to select between them w/ an environment variable compile-time?
-
 	fs_descr_t const shader_descr = fs_open("res", SHADER_NAME ".wgsl", FS_FLAGS_READ);
 
 	if (shader_descr == FS_OPEN_ERR) {
