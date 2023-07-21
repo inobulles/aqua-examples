@@ -12,7 +12,6 @@ Deps.git_inherit("https://github.com/inobulles/aqua-c")
 
 var cc = CC.new()
 
-cc.add_opt("-I/home/obiwac/aqua-c/src")
 cc.add_opt("-Wall")
 cc.add_opt("-Wextra")
 cc.add_opt("-Werror")
